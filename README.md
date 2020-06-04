@@ -25,10 +25,10 @@ From the IRS inflows tables, I am using the origin and destination GEOIDs, and t
 
 ## Figures  
 Sample net migration map:  
-![state 2018](Users/rache/Documents/GitHub/GISIII_FinalProject/net_state.png)
+![state 2018](https://github.com/RachelAdina/GISIII_FinalProject/blob/master/net_state.png)
 
 Sample origin-destination flow map:  
-![state 2018](Users/rache/Documents/GitHub/GISIII_FinalProject/od_state.png)  
+![state 2018](https://github.com/RachelAdina/GISIII_FinalProject/blob/master/od_state.png)  
 
 
 ## Future Work
