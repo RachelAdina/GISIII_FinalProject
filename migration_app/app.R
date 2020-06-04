@@ -1,18 +1,111 @@
-library(shiny)
+library(tidyverse)
+library(tidycensus)
+library(tigris)
 library(sf)
+library(spData)
+library(glue)
 library(readr)
-library(dplyr)
+
+library(shiny)
 library(ggmap)
+library(leaflet)
 
 setwd("C:/Users/rache/Documents/GitHub/GISIII_FinalProject/app_data")
-counties <- st_read('counties.shp')
-counties_merged <- st_read('counties_merged.shp')
-states_merged <- st_read('states_merged.shp')
-regions_merged <- st_read('regions_merged')
+
+#Note: the app doesn't render properly when running directly from the shapefiles. 
+#I have recreated them in the code below. 
+#Please see the attached .Rmd file for function annotations. 
+
+#counties <- st_read('counties.shp')
+#counties_merged <- st_read('counties_merged.shp')
+#states_merged <- st_read('states_merged.shp')
+#regions_merged <- st_read('regions_merged.shp')
 
 od_cty = read_csv('od_cty.csv')
 od_st = read_csv('od_st.csv')
 od_reg = read_csv('od_reg.csv')
+
+
+census_api_key("aeb3a2d13263357ddb5af381a90ce369a3e1a85f", install = TRUE, overwrite=TRUE)
+counties <- get_acs(geography = 'county',
+                    variables = 'B01001_001',
+                    geometry = TRUE)
+
+counties = counties %>%
+    select(GEOID, NAME, geometry) %>%
+    filter(!grepl('Puerto Rico', NAME)) %>%
+    filter(!grepl('Alaska', NAME)) %>%
+    filter(!grepl('Hawaii', NAME))
+
+data(us_states)
+crosswalk <- us_states %>% 
+    st_drop_geometry() %>%
+    select(GEOID, NAME, REGION) %>%
+    rename(st_fips = GEOID)
+
+counties = counties %>% separate(NAME, into = c('county', 'state'), sep=', ')
+counties = left_join(counties, crosswalk, by=c('state'='NAME'))
+
+
+years = c('1314', '1415', '1516', '1617', '1718')
+
+load_inflows = function(name, yr){
+    df = read_csv(name)
+    df = subset(df, y2_countyfips!='000' & y1_statefips !='96')
+    df['year'] <- yr
+    df = df %>% 
+        filter(grepl('Total Migration-US', y1_countyname)) %>%
+        unite('geoid', y2_statefips:y2_countyfips, sep='', remove=TRUE) %>%
+        select(geoid, year, n1) %>%
+        rename(inflows = n1)
+}
+
+inflow_list <- list()
+for(year in years){
+    df = load_inflows(glue('inflow{year}.csv'), year)
+    inflow_list[[year]] <- df
+}
+
+inflows = do.call('rbind', inflow_list)
+substring(inflows$year, 1, 2) <- '20'
+
+
+load_outflows = function(name, yr){
+    df = read_csv(name)
+    df = subset(df, y1_countyfips!='000' & y2_statefips !='96')
+    df['year'] <- yr
+    df = df %>% 
+        filter(grepl('Total Migration-US', y2_countyname)) %>%
+        unite('geoid', y1_statefips:y1_countyfips, sep='', remove=TRUE) %>%
+        select(geoid, year, n1) %>%
+        rename(outflows = n1)
+}
+
+outflow_list <- list()
+for(year in years){
+    df = load_outflows(glue('outflow{year}.csv'), year)
+    outflow_list[[year]] <- df
+}
+
+outflows = do.call('rbind', outflow_list)
+substring(outflows$year, 1, 2) <- '20'
+
+net_join <- function(inflow, outflow, shape){
+    df = inner_join(inflow, outflow, by=c('geoid', 'year'))
+    df['net_migration'] = df$inflows - df$outflows
+    shape_merge = left_join(shape, df, by=c('GEOID'='geoid'))
+}
+
+counties_merged = net_join(inflows, outflows, counties)
+
+aggregate_geom = function(df, col){
+    level <- enquo(col)
+    new_df = df %>% group_by((!!level), year) %>%
+        summarize(net_migrants = sum(net_migration, na.rm=TRUE))
+}
+
+states_merged = aggregate_geom(counties_merged, state)
+regions_merged = aggregate_geom(counties_merged, REGION)
 
 
 # Define UI 

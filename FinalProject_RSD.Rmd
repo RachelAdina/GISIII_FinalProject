@@ -7,7 +7,9 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir="C:/Users/rache/Documents/GitHub/GISIII_FinalProject/app_data")
 ```
+
 This project downloads, cleans, and aggregates U.S. domestic migration data from the IRS for a given set of input years. Sample visualizations are shown for the year 2018. The accompanying shiny app allows the user to change the input year for visualizations at the county, state, and regional level. 
 
 ```{r chunk1, include=TRUE, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
@@ -61,8 +63,6 @@ IRS data is recorded as the change from one year to the next. The number of taxp
   
 Note: this chunk is set not to evaluate, because the files are already in the folder
 ```{r, include=TRUE, echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE}
-#setwd("C:/Users/rache/Documents/GitHub/GISIII_FinalProject")
-
 #specify that we want both inflows and outflows
 directions = c('in', 'out')
 
@@ -88,7 +88,6 @@ for(dir in directions){
 
 Import and and clean inflows data.  
 ```{r, include=TRUE, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
-setwd("C:/Users/rache/Documents/GitHub/GISIII_FinalProject")
 years = c('1314', '1415', '1516', '1617', '1718')
 
 #define function
@@ -124,7 +123,6 @@ substring(inflows$year, 1, 2) <- '20'
   
 Import and and clean outflows data.  
 ```{r, include=TRUE, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
-setwd("C:/Users/rache/Documents/GitHub/GISIII_FinalProject")
 years = c('1314', '1415', '1516', '1617', '1718')
 
 #define function
@@ -261,8 +259,6 @@ leaflet(data = regions18) %>%
   
 Reload outflows data, preserving origin and destination values.
 ```{r, message=FALSE, warning=FALSE}
-setwd("C:/Users/rache/Documents/GitHub/GISIII_FinalProject")
-
 #Make a more comprehensive crosswalk from the counties table.
 xwalk_all = counties %>% st_drop_geometry() %>%
   select(GEOID, county, state, REGION)
